@@ -1,5 +1,5 @@
 # Ignore the virtual environment
 venv/
 # Ignore the credentials file and environment file
-config/service_account.json
+config/squad-goals*.*
 .env
