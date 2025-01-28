@@ -2,46 +2,109 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import gradio as gr
 from datetime import datetime
+from typing import List, Union
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # Setup Google Sheets
-def setup_google_sheets():
-    # Define the scope
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+def setup_google_sheets() -> gspread.Worksheet:
+    """
+    Authenticate and connect to the Google Sheet.
 
-    # Authenticate using the service account
-    creds = ServiceAccountCredentials.from_json_keyfile_name("config/service_account.json", scope)
-    client = gspread.authorize(creds)
+    Returns:
+        gspread.Worksheet: The first sheet of the Google Sheet.
+    """
+    try:
+        # Define the scope
+        scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 
-    # Open the Google Sheet
-    sheet = client.open("Squad Goals").sheet1  # Access the first sheet
-    return sheet
+        # Add more detailed logging
+        logging.info("Attempting to load credentials...")
+        creds = ServiceAccountCredentials.from_json_keyfile_name("config/service_account.json", scope)
+        
+        logging.info("Authorizing with Google...")
+        client = gspread.authorize(creds)
+        
+        logging.info("Opening spreadsheet...")
+        sheet = client.open("SQUAD GOALS").sheet1  # Access the first sheet
+        
+        # Test access by trying to get the sheet title
+        sheet_title = sheet.title
+        logging.info(f"Successfully accessed sheet: {sheet_title}")
+        
+        return sheet
+    except FileNotFoundError:
+        logging.error("Service account JSON file not found at config/service_account.json")
+        raise
+    except ValueError as e:
+        logging.error(f"Invalid service account JSON file: {e}")
+        raise
+    except Exception as e:
+        logging.error(f"Error setting up Google Sheets: {str(e)}")
+        logging.error(f"Error type: {type(e)}")
+        raise
 
 # Log a new goal
-def log_goal(goal):
+def log_goal(goal: str) -> str:
+    """
+    Log a new goal to the Google Sheet.
+
+    Args:
+        goal (str): The goal to log.
+
+    Returns:
+        str: A message indicating the result of the operation.
+    """
     if not goal.strip():
         return "Goal cannot be empty!"
     
     try:
         sheet = setup_google_sheets()
+        data = sheet.get_all_records()
+
+        # Check for duplicates
+        if any(row["Goal"] == goal for row in data):
+            return f"Goal '{goal}' already exists!"
+
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sheet.append_row([goal, "Pending", timestamp])
         return f"Goal '{goal}' logged successfully!"
     except Exception as e:
-        return f"An error occurred: {e}"
+        logging.error(f"Error logging goal: {e}")
+        return "An unexpected error occurred. Please try again."
 
 # View all logged goals
-def view_goals():
+def view_goals() -> Union[List[List[str]], List[str]]:
+    """
+    Fetch all logged goals from the Google Sheet.
+
+    Returns:
+        Union[List[List[str]], List[str]]: A list of goals or an error message.
+    """
     try:
         sheet = setup_google_sheets()
         data = sheet.get_all_records()
+
         # Convert list of dictionaries to list of lists
         data_list = [[row["Goal"], row["Status"], row["Timestamp"]] for row in data]
         return data_list
     except Exception as e:
-        return f"An error occurred: {e}"
+        logging.error(f"Error fetching goals: {e}")
+        return [["An unexpected error occurred while fetching goals."]]
 
 # Mark a goal as completed
-def mark_goal_complete(goal):
+def mark_goal_complete(goal: str) -> str:
+    """
+    Mark a goal as completed in the Google Sheet.
+
+    Args:
+        goal (str): The goal to mark as completed.
+
+    Returns:
+        str: A message indicating the result of the operation.
+    """
     try:
         sheet = setup_google_sheets()
         data = sheet.get_all_records()
@@ -54,10 +117,17 @@ def mark_goal_complete(goal):
         
         return f"Goal '{goal}' not found or already completed."
     except Exception as e:
-        return f"An error occurred: {e}"
+        logging.error(f"Error marking goal as completed: {e}")
+        return "An unexpected error occurred. Please try again."
 
 # Gradio Interface
-def squad_goals_app():
+def squad_goals_app() -> gr.Blocks:
+    """
+    Create the Gradio interface for the app.
+
+    Returns:
+        gr.Blocks: The Gradio Blocks interface.
+    """
     with gr.Blocks() as app:
         gr.Markdown("## Squad Goals: Track Your Accomplishments")
         
@@ -72,7 +142,7 @@ def squad_goals_app():
         with gr.Row():
             view_button = gr.Button("View Goals")
             goal_table = gr.Dataframe(headers=["Goal", "Status", "Timestamp"], interactive=False)
-            view_button.click(view_goals, outputs=goal_table)
+            view_button.click(view_goals, outputs=goal_table, show_progress=True)
         
         # Mark Goal as Complete Section
         with gr.Row():
