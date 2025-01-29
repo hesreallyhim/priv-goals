@@ -46,10 +46,7 @@ The app uses **Gradio** for the user interface and **Google Sheets** as the back
 ## Usage
 
 - Open the Gradio interface in your browser.
-- Use the following features:
-  - **Log Goal**: Enter a new goal and log it.
-  - **View Goals**: View a table of all logged goals.
-  - **Mark as Completed**: Mark an existing goal as "Completed."
+- Talk to the chatbot to log new goals, view existing goals, and mark goals as completed.
 
 ## Project Structure
 

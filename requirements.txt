@@ -1,5 +1,6 @@
 gradio
 gspread
 oauth2client
+openai
 pandas
 python-dotenv
