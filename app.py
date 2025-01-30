@@ -104,6 +104,39 @@ def delete_goal(goal: str) -> str:
         logging.error(f"Error deleting goal: {e}")
         return "An unexpected error occurred. Please try again."
 
+def view_goals_formatted() -> tuple[list, list]:
+    """
+    Returns goals in a formatted way for the DataFrame display.
+    Returns tuple of (list of goals, list of column headers)
+    """
+    try:
+        sheet = setup_google_sheets()
+        data = sheet.get_all_records()
+        if not data:
+            return [], []
+            
+        # Format the data for display
+        formatted_data = []
+        for row in data:
+            formatted_data.append([
+                row['Goal'],
+                row['Status'],
+                row.get('Timestamp', '')
+            ])
+            
+        headers = ['Goal', 'Status', 'Created At']
+        return formatted_data, headers
+    except Exception as e:
+        logging.error(f"Error fetching formatted goals: {e}")
+        return [], []
+
+def should_refresh_goals(_messages: list) -> bool:
+    """
+    Check if the most recent interaction included a tool call that modified the sheet.
+    """
+    # TODO: Implement a more robust check based on tool calls
+    return True
+
 # Define tools
 tools = [{
     "type": "function",
@@ -261,11 +294,22 @@ def gradio_app():
     messages = [system_message, welcome_message]
     
     with gr.Blocks() as app:
-        chatbot = gr.Chatbot(
-            label="Squad Goals Chatbot",
-            height=400,
-            value=[[None, welcome_message["content"]]]
-        )
+        with gr.Row():
+            # Goals list display
+            goals_dataframe = gr.Dataframe(
+                headers=["Goal", "Status", "Created At"],
+                label="Your Goals",
+                value=view_goals_formatted()[0],
+                interactive=False,
+                wrap=True
+            )
+        
+        with gr.Row():
+            chatbot = gr.Chatbot(
+                label="Squad Goals Chatbot",
+                height=400,
+                value=[[None, welcome_message["content"]]]
+            )
         
         with gr.Row():
             input_box = gr.Textbox(
@@ -275,9 +319,14 @@ def gradio_app():
             )
             submit_button = gr.Button("Submit", scale=1)
 
+        def refresh_goals():
+            """Helper function to refresh the goals display"""
+            goals_data, _ = view_goals_formatted()
+            return goals_data
+
         def interact(user_message, history):
             if not user_message.strip():
-                return history, ""
+                return history, "", None
                 
             logging.info(f"User message: {user_message}")
             
@@ -295,18 +344,22 @@ def gradio_app():
             # Update chat history
             history.append((user_message, response))
             
-            return history, ""
+            # Only refresh goals if a sheet-modifying tool was used
+            updated_goals = refresh_goals() if should_refresh_goals(updated_messages) else None
+            
+            return history, "", updated_goals
 
+        # Connect the interaction function
         submit_button.click(
             interact,
             inputs=[input_box, chatbot],
-            outputs=[chatbot, input_box]
+            outputs=[chatbot, input_box, goals_dataframe]
         )
         
         input_box.submit(
             interact,
             inputs=[input_box, chatbot],
-            outputs=[chatbot, input_box]
+            outputs=[chatbot, input_box, goals_dataframe]
         )
 
     return app
