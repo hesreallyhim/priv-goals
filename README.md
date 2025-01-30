@@ -104,6 +104,8 @@ squad-goals/
 - [ ] **Handle edge cases** (e.g., a goal named "complete" should not confuse the system).
 - [ ] **Implement semantic goal identification**, so similar goals (e.g., "read a book" vs. "read any book") are recognized as the same.
 - [ ] **Make notes about the current status of a goal**, which the AI can process and provide feedback on.
+- [ ] **Implement local storage** for goals, so the user can access their goals privately offline.
+- [ ] **Implement alternate LLMs** (e.g., local models) for more flexibility.
 
 ### **4️⃣ User Experience & UI**
 - [x] **Create a persistent view of the goal list**, instead of requiring the user to ask to view it each time.
