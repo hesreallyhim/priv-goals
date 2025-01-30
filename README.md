@@ -88,7 +88,7 @@ squad-goals/
 ## Roadmap
 
 ### **1️⃣ Goal Management Enhancements**
-- [ ] **Delete/remove goals** from the tracker.
+- [x] **Delete/remove goals** from the tracker.
 - [ ] **Rename goals** for better organization.
 - [ ] **Revert a completed goal back to "in progress."**
 - [ ] **Allow users to enter a duplicate goal** (e.g., "read a book") if a similar goal was previously completed.
