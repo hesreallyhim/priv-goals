@@ -234,14 +234,37 @@ def chat_with_openai(messages: list) -> tuple[str, list]:
         logging.error(f"Error during chatbot interaction: {e}")
         return "An error occurred. Please try again.", messages
 
+system_message = {
+    "role": "system",
+    "content": "You are a goal-tracking assistant that helps users manage their "
+        "goals. You can help them add or delete goals, view existing goals, "
+        "and mark goals as complete."
+}
+
+welcome_message = {
+    "role": "assistant",
+    "content": "# 🎯 Welcome to Squad Goals!\n"
+        "I can help you track and manage your goals effectively. Here's what you can do:\n\n"
+        "✅ **Add a new goal** – You can specify an optional completion date, or I'll ask if you have one in mind.\n"
+        "✅ **View your active and completed goals** – I maintain a persistent view of your goal list.\n"
+        "✅ **Mark a goal as completed** – I'll track when you started and completed it.\n"
+        "✅ **Rename or delete a goal** – Keep your goals organized.\n"
+        "✅ **Revert a completed goal back to \"in progress\"** – If you need to keep working on it.\n"
+        "✅ **Add notes to a goal** – Keep track of updates, progress, or follow-up tasks.\n"
+        "🔍 **I recognize similar goals** – I can help you avoid duplicates unless a previous goal has already been completed.\n"
+        "📅 **I handle vague deadlines** – Tell me things like \"next week\" or \"by the end of the month,\" and I'll interpret it.\n\n"
+        "💡 **Let's get started! What goal would you like to track today?** 🚀"
+}
+
 def gradio_app():
     # Initialize messages list
-    messages = [{"role": "system", "content": "You are a goal-tracking assistant that helps users manage their goals. You can help them add new goals, view existing goals, and mark goals as complete."}]
+    messages = [system_message, welcome_message]
     
     with gr.Blocks() as app:
         chatbot = gr.Chatbot(
             label="Squad Goals Chatbot",
-            height=400
+            height=400,
+            value=[[None, welcome_message["content"]]]
         )
         
         with gr.Row():

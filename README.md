@@ -106,7 +106,7 @@ squad-goals/
 
 ### **4️⃣ User Experience & UI**
 - [ ] **Create a persistent view of the goal list**, instead of requiring the user to ask to view it each time.
-- [ ] **Display an initial welcome message** from the AI, describing the available functionality of the app.
+- [x] **Display an initial welcome message** from the AI, describing the available functionality of the app.
 
 ### **5️⃣ Debugging & Logging**
 - [ ] **Create a logging system** to record every conversation during development for debugging purposes.
