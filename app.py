@@ -79,6 +79,31 @@ def mark_goal_complete(goal: str) -> str:
         logging.error(f"Error marking goal as completed: {e}")
         return "An unexpected error occurred. Please try again."
 
+def delete_goal(goal: str) -> str:
+    """
+    Deletes a goal from the Google Sheets tracker.
+
+    Args:
+        goal (str): The name of the goal to delete.
+
+    Returns:
+        str: Success or error message.
+    """
+    try:
+        sheet = setup_google_sheets()
+        data = sheet.get_all_records()
+
+        # Find the goal in the sheet
+        for i, row in enumerate(data, start=2):  # Start at 2 to account for the header row
+            if row["Goal"] == goal:
+                sheet.delete_rows(i)
+                return f"Goal '{goal}' has been deleted successfully."
+
+        return f"Goal '{goal}' not found in the tracker."
+    except Exception as e:
+        logging.error(f"Error deleting goal: {e}")
+        return "An unexpected error occurred. Please try again."
+
 # Define tools
 tools = [{
     "type": "function",
@@ -117,6 +142,19 @@ tools = [{
             "required": ["goal"]
         }
     }
+}, {
+    "type": "function",
+    "function": {
+        "name": "delete_goal",
+        "description": "Delete a goal from the tracker.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "goal": {"type": "string"}
+            },
+            "required": ["goal"]
+        }
+    }
 }]
 
 def call_function(name: str, args: dict) -> str:
@@ -127,6 +165,8 @@ def call_function(name: str, args: dict) -> str:
         return view_goals()
     elif name == "mark_goal_complete":
         return mark_goal_complete(**args)
+    elif name == "delete_goal":
+        return delete_goal(**args)
     else:
         raise ValueError(f"Unknown function: {name}")
 
