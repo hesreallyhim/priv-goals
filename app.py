@@ -132,7 +132,7 @@ def view_goals_formatted() -> tuple[list, list]:
 
 def should_refresh_goals(_messages: list) -> bool:
     """
-    Check if the most recent interaction included a tool call that modified the sheet.
+    Checks if the most recent interaction included a tool call that modified the sheet.
     """
     # TODO: Implement a more robust check based on tool calls
     return True
@@ -191,15 +191,16 @@ tools = [{
 }]
 
 def call_function(name: str, args: dict) -> str:
-    """Execute the appropriate function based on the name."""
-    if name == "log_goal":
-        return log_goal(**args)
-    elif name == "view_goals":
-        return view_goals()
-    elif name == "mark_goal_complete":
-        return mark_goal_complete(**args)
-    elif name == "delete_goal":
-        return delete_goal(**args)
+    """Executes the appropriate function based on the name."""
+    functions = {
+        "log_goal": log_goal,
+        "view_goals": view_goals,
+        "mark_goal_complete": mark_goal_complete,
+        "delete_goal": delete_goal
+    }
+    
+    if name in functions:
+        return functions[name](**args) if args else functions[name]()
     else:
         raise ValueError(f"Unknown function: {name}")
 
