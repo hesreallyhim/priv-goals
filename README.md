@@ -92,6 +92,7 @@ squad-goals/
 - [ ] **Rename goals** for better organization.
 - [ ] **Revert a completed goal back to "in progress."**
 - [ ] **Allow users to enter a duplicate goal** (e.g., "read a book") if a similar goal was previously completed.
+- [ ] **Allow the user to "un-delete" a goal** that was removed by mistake.
 
 ### **2️⃣ Time Tracking & Scheduling**
 - [ ] **Track timestamps**: When a goal is created, when it is completed, and how long it took.
@@ -105,7 +106,8 @@ squad-goals/
 - [ ] **Make notes about the current status of a goal**, which the AI can process and provide feedback on.
 
 ### **4️⃣ User Experience & UI**
-- [ ] **Create a persistent view of the goal list**, instead of requiring the user to ask to view it each time.
+- [x] **Create a persistent view of the goal list**, instead of requiring the user to ask to view it each time.
+- [ ] **Improve the logic for refreshing the goal list** after a new goal is added or an existing goal is updated.
 - [x] **Display an initial welcome message** from the AI, describing the available functionality of the app.
 
 ### **5️⃣ Debugging & Logging**
