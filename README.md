@@ -85,6 +85,32 @@ squad-goals/
 6. **Deployment**:
    - Host the app on a platform like Hugging Face Spaces, AWS, or Heroku.
 
+## Roadmap
+
+### **1️⃣ Goal Management Enhancements**
+- [ ] **Delete/remove goals** from the tracker.
+- [ ] **Rename goals** for better organization.
+- [ ] **Revert a completed goal back to "in progress."**
+- [ ] **Allow users to enter a duplicate goal** (e.g., "read a book") if a similar goal was previously completed.
+
+### **2️⃣ Time Tracking & Scheduling**
+- [ ] **Track timestamps**: When a goal is created, when it is completed, and how long it took.
+- [ ] **Calculate and display average completion time** for goals.
+- [ ] **Add an "Intended Completion Date" column**, which can be optional or open-ended (e.g., "some time next week").
+- [ ] **Prompt the user for a completion date** when adding a goal if they don’t specify one (but allow them to decline).
+
+### **3️⃣ AI & Usability Improvements**
+- [ ] **Handle edge cases** (e.g., a goal named "complete" should not confuse the system).
+- [ ] **Implement semantic goal identification**, so similar goals (e.g., "read a book" vs. "read any book") are recognized as the same.
+- [ ] **Make notes about the current status of a goal**, which the AI can process and provide feedback on.
+
+### **4️⃣ User Experience & UI**
+- [ ] **Create a persistent view of the goal list**, instead of requiring the user to ask to view it each time.
+- [ ] **Display an initial welcome message** from the AI, describing the available functionality of the app.
+
+### **5️⃣ Debugging & Logging**
+- [ ] **Create a logging system** to record every conversation during development for debugging purposes.
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
