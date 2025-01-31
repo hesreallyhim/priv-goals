@@ -115,6 +115,9 @@ squad-goals/
 ### **5️⃣ Debugging & Logging**
 - [ ] **Create a logging system** to record every conversation during development for debugging purposes.
 
+### **6️⃣ Codebase & Documentation**
+- [ ] **Rename project** to `priv-goals`
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
