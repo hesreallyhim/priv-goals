@@ -93,6 +93,7 @@ squad-goals/
 - [ ] **Revert a completed goal back to "in progress."**
 - [ ] **Allow users to enter a duplicate goal** (e.g., "read a book") if a similar goal was previously completed.
 - [ ] **Allow the user to "un-delete" a goal** that was removed by mistake.
+- [ ] **Allow multiple lists** (e.g., short-term, long-term, personal, work, etc.) for better organization.
 
 ### **2️⃣ Time Tracking & Scheduling**
 - [ ] **Track timestamps**: When a goal is created, when it is completed, and how long it took.
@@ -106,6 +107,8 @@ squad-goals/
 - [ ] **Make notes about the current status of a goal**, which the AI can process and provide feedback on.
 - [ ] **Implement local storage** for goals, so the user can access their goals privately offline.
 - [ ] **Implement alternate LLMs** (e.g., local models) for more flexibility.
+- [ ] **Test the app's ability to edit and update goals** (e.g., changing name of a goal).
+- [ ] **Allow user to modify spreadsheet schema** (e.g., add new columns for additional information).
 
 ### **4️⃣ User Experience & UI**
 - [x] **Create a persistent view of the goal list**, instead of requiring the user to ask to view it each time.
