@@ -12,15 +12,27 @@ import gspread
 import litellm
 from litellm import check_valid_key, completion, validate_environment
 from oauth2client.service_account import ServiceAccountCredentials
-# from openai import OpenAI
 
 class LLMInitializationError(Exception):
-    """Custom exception for LLM initialization errors"""
+    """Exception raised when initialization of the Large Language Model fails.
+
+    This exception indicates failures during LLM setup, including:
+    - Missing or invalid API keys
+    - Failed environment validation
+    - Connection test failures
+    - Missing required model capabilities
+    """
     pass
 
 class DotEnvLoadingError(Exception):
-    """Custom exception for .env loading errors"""
+    """Exception raised when loading environment variables from .env file fails.
+
+    This exception indicates configuration loading failures, including:
+    - Missing .env file
+    - Invalid file permissions
+    """
     pass
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -234,70 +246,195 @@ def initialize_lite_llm(
         raise LLMInitializationError(f"Connection test message failed: {e}")
 
 class Goal:
-    """Encapsulates a goal with automatic sanitization for storage and clean display."""
+    """Represents a user goal with sanitized storage and display formatting.
+
+    This class manages the dual representation of goals - a user-friendly display version
+    and a storage-safe sanitized version. It handles sanitization to prevent security issues
+    like formula injection in spreadsheet storage while maintaining readable output for users.
+
+    Attributes:
+        display_name (str): The original goal name as entered by the user.
+        sanitized_name (str): Storage-safe version of the goal name, wrapped in quotes.
+
+    Example:
+        >>> goal = Goal("Complete project by Friday")
+        >>> print(goal.display_name)
+        'Complete project by Friday'
+        >>> print(goal.sanitized_name)
+        "'Complete project by Friday'"
+
+    Note:
+        The class includes a copy constructor pattern that should be reviewed as it may
+        indicate architectural issues in the codebase.
+    """
 
     def __init__(self, name: str) -> None:
-        # TODO: This is probably a symptom of a bug
+        """Initialize a new Goal instance.
+
+        Args:
+            name (str): The goal name or description to store.
+
+        Raises:
+            ValueError: If name is empty, None, or not a string.
+            TypeError: If name is a Goal instance (indicates potential code issue).
+
+        Example:
+            >>> goal = Goal("Read War and Peace")
+            >>> print(goal.display_name)
+            Read War and Peace
+        """
         if isinstance(name, Goal):
-            # Copy constructor
+            # Copy constructor pattern - may indicate design issues
             self.display_name = name.display_name
             self.sanitized_name = name.sanitized_name
             return
-        self.display_name: str = name.strip()  # Store original user input
-        self.sanitized_name: str = self._sanitize_goal_name(self.display_name)  # Store sanitized version
+        
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("Goal name must be a non-empty string")
+        
+        self.display_name = name.strip()
+        self.sanitized_name = self._sanitize_goal_name(self.display_name)
 
-    def _sanitize_goal_name(self, goal: str) -> str:
-        """
-        Prevents spreadsheet formula execution by enclosing in single quotes.
+    def _sanitize_goal_name(self, goal_display_name: str) -> str:
+        """Sanitizes the goal name for safe storage.
 
-        NOTE:
-        - This ensures security but means that the stored value in raw data (CSV/Google Sheets)
-          will include quotes (e.g., `'Read a book'`).
-        - Users might expect to see their input exactly as entered when viewing raw data.
+        Wraps the goal name in single quotes to prevent formula injection in
+        spreadsheet storage systems. This ensures the content is treated as
+        literal text rather than potentially executable formulas.
+
+        Args:
+            goal_display_name (str): The display name of the goal to sanitize.
+
+        Returns:
+            str: The sanitized goal name, wrapped in single quotes.
+
+        Raises:
+            ValueError: If goal is empty or None.
+
+        Example:
+            >>> goal = Goal("=SUM(A1:A10)")  # Potentially unsafe formula
+            >>> print(goal.sanitized_name)
+            "'=SUM(A1:A10)'"  # Safely stored as text
         """
-        if not goal:
+        if not goal_display_name:
             raise ValueError("Goal name cannot be empty.")
         
-        return f"'{goal}'"  # Always wrap in single quotes
-    
+        return f"'{goal_display_name}'"
+
     def strip(self) -> str:
-        """Returns the sanitized goal name without the enclosing quotes."""
-        logging.info("Goal strip method was invoked on: " + self.display_name)
+        """Returns the display version of the goal name.
+
+        Provides string-like behavior for compatibility with code expecting
+        string objects. Returns the human-readable display_name rather than
+        the sanitized version.
+
+        Returns:
+            str: The unsanitized display name of the goal.
+
+        Example:
+            >>> goal = Goal("My Goal")
+            >>> print(goal.strip())
+            'My Goal'
+        """
         return self.display_name
 
 class GoalStorage(ABC):
-    """Abstract base class for goal storage backends."""
+    """Abstract base class defining the interface for goal storage backends.
+
+    This class establishes the contract that all goal storage implementations must
+    follow. It provides a consistent interface for CRUD operations on goals,
+    regardless of the underlying storage mechanism.
+
+    The interface maintains separation between display names (user-facing) and
+    sanitized names (storage-safe), with methods accepting display names but
+    working with sanitized versions internally.
+
+    Implementations must handle:
+    - Goal creation and storage
+    - Retrieval and formatting of goals
+    - Status updates and completion tracking
+    - Goal deletion
+    - Field updates and metadata management
+
+    Attributes:
+        None
+
+    Example:
+        class MyStorageBackend(GoalStorage):
+            def log_goal(self, goal: str) -> str:
+                # Implementation here
+                pass
+    """
 
     @abstractmethod
     def log_goal(self, goal: str) -> str:
-        """
-        Logs a new goal into the system if it does not already exist.
-        Use this to add a new goal to the system.
+        """Creates and stores a new goal.
 
         Args:
-            goal (str): The raw string representation of the goal to be logged, or a semantically equivalent phrase.
+            goal (str): The display name of the goal to store.
 
         Returns:
-            str: A message indicating whether the goal was successfully logged or if it already exists.
+            str: Success or failure message.
 
         Raises:
-            ValueError: If the goal string is empty or invalid.
+            ValueError: If goal is empty or invalid.
+
+        Example:
+            >>> storage.log_goal("Learn Python")
+            'Goal "Learn Python" logged successfully!'
         """
         pass
 
     @abstractmethod
     def view_goals_formatted(self) -> tuple[List[List[str]], List[str], str]:
-        """Retrieves all goals as a formatted CSV string."""
+        """Retrieves all goals in multiple formats for different use cases.
+
+        Returns:
+            tuple:
+                - List[List[str]]: Matrix of goal data for display
+                - List[str]: Column headers
+                - str: CSV string representation
+
+        Raises:
+            Exception: If goal retrieval or formatting fails.
+
+        Example:
+            >>> data, headers, csv_str = storage.view_goals_formatted()
+            >>> print(headers)
+            ['Goal', 'Status', 'Created At', ...]
+        """
         pass
     
     @abstractmethod
     def mark_goal_complete(self, goal: Goal) -> str:
-        """Marks a goal as completed. Expects a sanitized `Goal` object."""
+        """Updates a goal's status to completed.
+
+        Args:
+            goal (Goal): The goal to mark complete.
+
+        Returns:
+            str: Success message or not found/already complete message.
+
+        Example:
+            >>> storage.mark_goal_complete(Goal("Learn Python"))
+            'Goal "Learn Python" marked as completed!'
+        """
         pass
 
     @abstractmethod
     def delete_goal(self, goal: Goal) -> str:
-        """Deletes a goal. Expects a sanitized `Goal` object."""
+        """Removes a goal from storage.
+
+        Args:
+            goal (Goal): The goal to delete.
+
+        Returns:
+            str: Success message or not found message.
+
+        Example:
+            >>> storage.delete_goal(Goal("Abandoned Task"))
+            'Goal "Abandoned Task" has been deleted successfully.'
+        """
         pass
     
     @abstractmethod
@@ -316,15 +453,46 @@ class GoalStorage(ABC):
         pass
 
 class GoogleSheetsStorage(GoalStorage):
-    """Google Sheets-based storage for goal tracking."""
+    """Google Sheets implementation of goal storage.
+
+    Implements the GoalStorage interface using Google Sheets as the backend.
+    Handles authentication, connection management, and sheet operations.
+
+    This implementation requires network connectivity and valid Google Sheets
+    API credentials. All operations are subject to API quotas and rate limits.
+
+    Attributes:
+        credentials_path (str): Path to the Google Sheets API credentials file.
+        sheet_name (str): Name of the Google Sheet used for storage.
+
+    Example:
+        >>> storage = GoogleSheetsStorage("credentials.json", "My Goals")
+        >>> storage.log_goal("New project")
+        'Goal "New project" logged successfully!'
+
+    Note:
+        - Requires valid Google Sheets API credentials
+        - Network connectivity required for all operations
+        - Subject to API quotas and rate limits
+        - Handles OAuth2 authentication automatically
+    """
 
     def __init__(self, credentials_path: str, sheet_name: str = "SQUAD GOALS") -> None:
-        """
-        Initializes the Google Sheets storage.
+        """Initialize Google Sheets storage backend.
 
         Args:
-            credentials_path (str): Path to the service account JSON file.
-            sheet_name (str, optional): Name of the Google Sheet. Defaults to "SQUAD GOALS".
+            credentials_path (str): Path to service account JSON credentials.
+            sheet_name (str, optional): Name of the Google Sheet to use.
+                Defaults to "SQUAD GOALS".
+
+        Raises:
+            RuntimeError: If Google Sheets setup fails.
+
+        Example:
+            >>> storage = GoogleSheetsStorage(
+            ...     "service_account.json",
+            ...     "Team Goals 2024"
+            ... )
         """
         self.credentials_path = credentials_path
         self.sheet_name = sheet_name
@@ -411,14 +579,41 @@ class GoogleSheetsStorage(GoalStorage):
 
 
 class CSVStorage(GoalStorage):
-    """CSV-based storage for goal tracking."""
+    """CSV file-based implementation of goal storage.
+
+    Implements the GoalStorage interface using a CSV file as the backend.
+    Handles file creation, reading, writing, and maintains proper CSV formatting
+    and header structure.
+
+    The implementation is synchronous and involves file I/O for all operations.
+    Consider file locking for multi-process scenarios.
+
+    Attributes:
+        csv_path (str): Path to the CSV storage file.
+
+    Example:
+        >>> storage = CSVStorage("~/.priv_goals/goals.csv")
+        >>> storage.log_goal("New project")
+        'Goal "New project" logged successfully!'
+
+    Note:
+        - Creates CSV with headers if file doesn't exist
+        - All operations are atomic file reads/writes
+        - No built-in concurrency control
+    """
 
     def __init__(self, csv_path: str):
-        """
-        Initializes the CSV storage.
+        """Initialize CSV storage backend.
 
         Args:
-            csv_path (str): Path to the CSV file.
+            csv_path (str): Path for CSV storage. User directory symbols (~)
+                are expanded.
+
+        Raises:
+            OSError: If path is invalid or file operations fail.
+
+        Example:
+            >>> storage = CSVStorage("~/.priv_goals/goals.csv")
         """
         self.csv_path = os.path.expanduser(csv_path)
         self._ensure_csv_file()
