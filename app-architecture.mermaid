@@ -1,0 +1,42 @@
+classDiagram
+    class GoalStorage {
+        <<abstract>>
+        +log_goal(goal: str)
+        +view_goals_formatted()
+        +mark_goal_complete(goal: Goal)
+        +delete_goal(goal: Goal)
+        +update_goal_fields(goal_name: str, updates: dict)
+    }
+    
+    class CSVStorage {
+        -csv_path: str
+        -_ensure_csv_file()
+        -_load_goals()
+        -_save_goals(data)
+        +log_goal(goal)
+        +view_goals_formatted()
+        +mark_goal_complete(goal)
+        +delete_goal(goal)
+    }
+    
+    class GoogleSheetsStorage {
+        -credentials_path: str
+        -sheet_name: str
+        -_setup_google_sheets()
+        +log_goal(goal)
+        +view_goals_formatted()
+        +mark_goal_complete(goal)
+        +delete_goal(goal)
+    }
+    
+    class Goal {
+        +display_name: str
+        +sanitized_name: str
+        -_sanitize_goal_name(goal)
+        +strip()
+    }
+    
+    GoalStorage <|-- CSVStorage
+    GoalStorage <|-- GoogleSheetsStorage
+    CSVStorage -- Goal
+    GoogleSheetsStorage -- Goal

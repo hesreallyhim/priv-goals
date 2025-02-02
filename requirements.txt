@@ -1,5 +1,6 @@
 gradio
 gspread
+litellm>=1.0.0
 oauth2client
 openai
 pandas

@@ -1,40 +1,248 @@
-from openai import OpenAI
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from abc import ABC, abstractmethod
+import csv
 from datetime import datetime
-import os
-from dotenv import load_dotenv
 import json
 import logging
+import os
+from typing import Any, Dict, List, Optional, Tuple
+
+from dotenv import load_dotenv
 import gradio as gr
-from abc import ABC, abstractmethod
-from typing import List, Tuple
-import csv
+import gspread
+import litellm
+from litellm import check_valid_key, completion, validate_environment
+from oauth2client.service_account import ServiceAccountCredentials
+# from openai import OpenAI
+
+class LLMInitializationError(Exception):
+    """Custom exception for LLM initialization errors"""
+    pass
+
+class DotEnvLoadingError(Exception):
+    """Custom exception for .env loading errors"""
+    pass
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
 # Load environment variables from .env
+if not load_dotenv():
+    raise DotEnvLoadingError("Failed to load .env file from default path")
+
 load_dotenv()
-
-# Retrieve the OpenAI API key
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    raise ValueError("OpenAI API key is missing. Please set it in the .env file.")
-
-# Initialize OpenAI client
-client = OpenAI(api_key=OPENAI_API_KEY)
-
-# Declare OpenAI model name
-MODEL_NAME = os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini")
 
 # Declare spreadsheet header names
 HEADER_NAMES = ["Goal", "Status", "Created At", "Completed At", "Duration", "Expected Duration", "Notes"]
+DEFAULT_OPENAI_MODEL_NAME = "gpt-4"
+
+# Define tools
+tools = [{
+    "type": "function",
+    "function": {
+        "name": "log_goal",
+        "description": "Add a new goal to the system.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "goal": {
+                    "type": "string",
+                    "description": "Name of the goal to add, or a phrase that is semantically equivalent."
+                }
+            },
+            "required": ["goal"]
+        }
+    }
+}, {
+    "type": "function",
+    "function": {
+        "name": "view_goals",
+        "description": "View all logged goals.",
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    }
+}, {
+    "type": "function",
+    "function": {
+        "name": "mark_goal_complete",
+        "description": "Mark a goal as completed.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "goal": {
+                    "type": "string",
+                    "description": "Name of the goal to add, or a phrase that is semantically equivalent."
+                }
+            },
+            "required": ["goal"]
+        }
+    }
+}, {
+    "type": "function",
+    "function": {
+        "name": "delete_goal",
+        "description": "Delete a goal from the tracker.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "goal": {
+                    "type": "string",
+                    "description": "Name of the goal to add, or a phrase that is semantically equivalent."
+                }
+            },
+            "required": ["goal"]
+        }
+    }
+}, {
+    "type": "function",
+    "function": {
+        "name": "update_goal_fields",
+        "description": "Update multiple fields for a goal.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "goal": {
+                    "type": "string",
+                    "description": "The name of the goal to update, or a semantically equivalent description."
+                },
+                "updates": {
+                    "type": "object",
+                    "description": "A dictionary of fields to update. Keys are field names, values are new values."
+                }
+            },
+            "required": ["goal", "updates"]
+        }
+    }
+}]
+
+def setup_completion_function(
+    *args,
+    api_key: Optional[str] = None,
+    api_base: Optional[str] = None,
+    model_name: Optional[str] = None,
+    stream: Optional[bool] = False,
+    tools: Optional[List[Dict[str, Any]]] = tools,
+    tool_choice: Optional[str] = "auto",
+    **kwargs
+):
+    """
+    Set up the completion function with the specified parameters.
+    
+    Args:
+        stream: Whether to use streaming completions (optional - default: False)
+        model_name: The model name to use for completions (optional - default: None)
+    """
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
+    global completion
+    def custom_completion(**kwargs):
+        return litellm.completion(*args, stream=stream, model=model_name,api_key=api_key, base_url=api_base, tools=tools, tool_choice=tool_choice, **kwargs)
+    completion = custom_completion
+
+def initialize_lite_llm(
+    api_base: Optional[str] = None,
+    api_key: Optional[str] = None,
+    model_name: Optional[str] = None,
+    stream: Optional[bool] = False
+) -> None:
+    """
+    Initialize LLM configuration and test the connection.
+    Sets global litellm properties and tests the connection.
+    Ensures that all required environment variables are set.
+    Ensures that model supports tool-calling, and checks for parallel tool-calling.
+    
+    Args:
+        api_base: Override API_BASE from env (optional)
+        api_key: Override API_KEY from env (optional)
+        model_name: Override LITE_LLM_MODEL_NAME from env (optional)
+    
+    Raises:
+        LLMInitializationError: If initialization or connection test fails, or if LLM does not support tool-calling.
+    """
+    # Get configuration from environment or parameters
+    # litellm.model = model_name or os.getenv('LITE_LLM_MODEL_NAME')
+    LITE_LLM_MODEL_NAME = os.getenv("LITE_LLM_MODEL_NAME", DEFAULT_OPENAI_MODEL_NAME)
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    
+    api_key = api_key or os.getenv("LITE_LLM_API_KEY", OPENAI_API_KEY)
+    api_base = api_base or os.getenv("LITE_LLM_API_BASE_URL", "https://api.openai.com/v1")
+    model_name = model_name or LITE_LLM_MODEL_NAME
+    
+    # Comment or uncomment the following line to enable or disable liteLLM debug logs
+    # litellm._turn_on_debug()
+    
+    # send requests to "ollama_chat", per liteLLM docs
+    if model_name.startswith("ollama"):
+        model_name = model_name.replace("ollama", "ollama_chat", 1)
+    
+    # Validate environment configuration
+    keys_in_environment, missing_keys = validate_environment(model=model_name)
+    if not keys_in_environment:
+        raise LLMInitializationError("Invalid environment configuration, missing required keys: " + ", ".join(missing_keys))
+
+    # Validate API key
+    valid_key = check_valid_key(model=model_name, api_key=api_key)
+    if not valid_key:
+        raise LLMInitializationError(f"Invalid API key for model {model_name}")
+    
+    # Validate tool-calling support
+    # if not litellm.supports_function_calling(model=model_name):
+    #     raise LLMInitializationError(f"Model {model_name} does not support tool-calling")
+    
+    try:
+        if not litellm.supports_function_calling(model=model_name):
+            logging.warning(f"Model {model_name} does not support tool-calling")
+            # raise LLMInitializationError(f"Model {model_name} does not support tool-calling")
+        else:
+            logging.info(f"Model {model_name} supports tool-calling")
+    except Exception as e:
+        logging.warning(f"Model {model_name} does not support tool-calling")
+        # raise LLMInitializationError(f"Model {model_name} does not support tool-calling")
+    
+    supports_parallel_tool_calls = False
+    
+    # Check parallel function tool-calling support
+    try:
+        if not litellm.supports_parallel_function_calling(model=model_name):
+            logging.warning(f"Model {model_name} does not support parallel function calls")
+        else:
+            supports_parallel_tool_calls=True
+            logging.info(f"Model {model_name} supports parallel function calls")
+    except Exception as e:
+        logging.warning(f"Model {model_name} does not support parallel function calls")
+    
+    # Set up the completion function
+    setup_completion_function(stream=stream, model_name=model_name, api_key=api_key, api_base=api_base, parallel_tools_calls=supports_parallel_tool_calls)
+    
+    # Test LLM connection
+    test_response = completion(
+        messages=[{"role": "user", "content": "Please respond with the string 'Pong'"}]
+    )
+    
+    try:
+        response_content = test_response.choices[0].message.content
+        if "Pong" in response_content:
+            print(
+                f"Successfully initialized connection to {model_name}... "
+                f"Test message = \"Ping\"... "
+                f"Response = \"{response_content}\""
+            )
+        else:
+            raise LLMInitializationError(f"Connection test message failed with response: {response_content}")
+    except Exception as e:
+        raise LLMInitializationError(f"Connection test message failed: {e}")
 
 class Goal:
     """Encapsulates a goal with automatic sanitization for storage and clean display."""
 
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
+        # TODO: This is probably a symptom of a bug
+        if isinstance(name, Goal):
+            # Copy constructor
+            self.display_name = name.display_name
+            self.sanitized_name = name.sanitized_name
+            return
         self.display_name: str = name.strip()  # Store original user input
         self.sanitized_name: str = self._sanitize_goal_name(self.display_name)  # Store sanitized version
 
@@ -51,13 +259,30 @@ class Goal:
             raise ValueError("Goal name cannot be empty.")
         
         return f"'{goal}'"  # Always wrap in single quotes
+    
+    def strip(self) -> str:
+        """Returns the sanitized goal name without the enclosing quotes."""
+        logging.info("Goal strip method was invoked on: " + self.display_name)
+        return self.display_name
 
 class GoalStorage(ABC):
     """Abstract base class for goal storage backends."""
 
     @abstractmethod
     def log_goal(self, goal: str) -> str:
-        """Logs a new goal. Accepts raw user input (`str`), then converts it to a `Goal` object internally."""
+        """
+        Logs a new goal into the system if it does not already exist.
+        Use this to add a new goal to the system.
+
+        Args:
+            goal (str): The raw string representation of the goal to be logged, or a semantically equivalent phrase.
+
+        Returns:
+            str: A message indicating whether the goal was successfully logged or if it already exists.
+
+        Raises:
+            ValueError: If the goal string is empty or invalid.
+        """
         pass
 
     @abstractmethod
@@ -73,6 +298,21 @@ class GoalStorage(ABC):
     @abstractmethod
     def delete_goal(self, goal: Goal) -> str:
         """Deletes a goal. Expects a sanitized `Goal` object."""
+        pass
+    
+    @abstractmethod
+    def update_goal_fields(self, goal_name: str, updates: dict) -> str:
+        """
+        Updates multiple fields for a goal.
+
+        Args:
+            storage (GoalStorage): The storage backend (GoogleSheetsStorage or CSVStorage).
+            goal_name (str): The display name of the goal to update, or a phrase that is semantically equivalent.
+            updates (dict): A dictionary where keys are field names and values are new values.
+
+        Returns:
+            str: Success or error message.
+        """
         pass
 
 class GoogleSheetsStorage(GoalStorage):
@@ -122,33 +362,30 @@ class GoogleSheetsStorage(GoalStorage):
 
         return f"Goal '{goal_obj.display_name}' logged successfully!"
     
-    def view_goals_formatted(self) -> tuple[List[List[str]], List[str], str]:
+    def view_goals_formatted(self) -> Tuple[List[List[str]], List[str], str]:
         """
-        Returns goals in a formatted way for the DataFrame display.
-        Returns CSV-formatted data and headers.
+        Returns goals in a formatted way for the DataFrame display and CSV representation.
+
+        Returns:
+            Tuple[List[List[str]], List[str], str]: (Formatted data for Gradio, Column headers, CSV string)
         """
         try:
-            sheet = self._setup_google_sheets()
-            data = sheet.get_all_records()
+            # TODO: Move common logic to a shared method
+            data = self._load_goals()
             if not data:
                 return [], [], "No goals found."
-                
-            # Format the data for display
-            formatted_data = []
-            for row in data:
-                formatted_data.append([
-                    row['Goal'],
-                    row['Status'],
-                    row['Created At']
-                ])
-                
-            headers = ['Goal', 'Status', 'Created At']
-            csv = "\n".join([",".join(headers)] + [",".join(map(str, row)) for row in formatted_data])
-            logging.info("csv: " + csv)
-            return formatted_data, headers, csv
+
+            formatted_data = [[row[header_name] for header_name in HEADER_NAMES] for row in data]
+
+            csv_string = "\n".join([",".join(HEADER_NAMES)] + [",".join(map(str, row)) for row in formatted_data])
+            logging.info("CSV Output:\n" + csv_string)
+
+            return formatted_data, HEADER_NAMES, csv_string
+
         except Exception as e:
             logging.error(f"Error fetching formatted goals: {e}")
             return [], [], "An unexpected error occurred while fetching goals."
+        
 
     def mark_goal_complete(self, goal: Goal) -> str:
         sheet: gspread.Worksheet = self._setup_google_sheets()
@@ -210,6 +447,23 @@ class CSVStorage(GoalStorage):
             writer.writerows(data)
 
     def log_goal(self, goal: str) -> str:
+        """
+        Logs a new goal into the system if it does not already exist.
+
+        Args:
+            goal (str): The raw string representation of the goal to be logged.
+
+        Returns:
+            str: A message indicating whether the goal was successfully logged or if it already exists.
+
+        Raises:
+            ValueError: If the goal string is empty or invalid.
+
+        Notes:
+            - The goal is converted into a `Goal` object which sanitizes and formats the goal name.
+            - The method checks for duplicates before logging the new goal.
+            - The goal is stored with a status of "Pending" and a timestamp of when it was created.
+        """
         goal_obj = Goal(goal)  # Convert raw string to `Goal`
         data = self._load_goals()
 
@@ -233,29 +487,57 @@ class CSVStorage(GoalStorage):
 
     def view_goals_formatted(self) -> Tuple[List[List[str]], List[str], str]:
         """
-        Returns goals in a formatted way for the DataFrame display and CSV representation.
+        Fetches and formats the goals data.
+
+        This method loads the goals data, formats it into a list of lists based on predefined header names,
+        and generates a CSV string representation of the data. If no data is found, it returns empty lists
+        and a message indicating that no goals were found. In case of an error, it logs the error and returns
+        an appropriate message. An AI assistant may use this method to view the current goals in CSV format
+        by extracting the CSV string, which is the third element of the returned tuple.
 
         Returns:
-            Tuple[List[List[str]], List[str], str]: (Formatted data for Gradio, Column headers, CSV string)
+            Tuple[List[List[str]], List[str], str]: A tuple containing:
+                - A list of lists where each inner list represents a row of formatted goal data.
+                - A list of header names used for formatting the data.
+                - A CSV string representation of the formatted goal data.
+
+        Raises:
+            Exception: If an error occurs while fetching or formatting the goals data, it logs the error and
+                       returns an empty list, an empty header list, and an error message.
         """
         try:
+            # TODO: Move common logic to a shared method
             data = self._load_goals()
             if not data:
                 return [], [], "No goals found."
 
             formatted_data = [[row[header_name] for header_name in HEADER_NAMES] for row in data]
-            headers = HEADER_NAMES
 
-            csv_string = "\n".join([",".join(headers)] + [",".join(map(str, row)) for row in formatted_data])
+            csv_string = "\n".join([",".join(HEADER_NAMES)] + [",".join(map(str, row)) for row in formatted_data])
             logging.info("CSV Output:\n" + csv_string)
 
-            return formatted_data, headers, csv_string
+            return formatted_data, HEADER_NAMES, csv_string
 
         except Exception as e:
             logging.error(f"Error fetching formatted goals: {e}")
             return [], [], "An unexpected error occurred while fetching goals."
 
     def mark_goal_complete(self, goal: Goal) -> str:
+        """
+        Marks the specified goal as completed.
+
+        This method updates the status of the given goal to "Completed" and sets the 
+        "Completed At" timestamp to the current date and time. It also calculates the 
+        duration from the goal's creation to its completion.
+
+        Args:
+            goal (Goal): The name of the goal to be deleted, or a phrase that is semantically
+                equivalent to the name.
+
+        Returns:
+            str: A message indicating whether the goal was successfully marked as completed 
+             or if it was not found or already completed.
+        """
         data = self._load_goals()
         updated = False
 
@@ -275,6 +557,16 @@ class CSVStorage(GoalStorage):
         return f"Goal '{goal.display_name}' marked as completed!"
 
     def delete_goal(self, goal: Goal) -> str:
+        """
+        Deletes a goal from the stored goals.
+
+        Args:
+            goal (Goal): The name of the goal to be deleted, or a phrase that is semantically
+                equivalent to the name.
+
+        Returns:
+            str: A message indicating whether the goal was successfully deleted or not.
+        """
         data = self._load_goals()
         new_data = [row for row in data if row["Goal"] != goal.sanitized_name]
 
@@ -290,7 +582,7 @@ class CSVStorage(GoalStorage):
 
         Args:
             storage (GoalStorage): The storage backend (GoogleSheetsStorage or CSVStorage).
-            goal_name (str): The display name of the goal to update.
+            goal_name (str): The display name of the goal to update, or a phrase that is semantically equivalent.
             updates (dict): A dictionary where keys are field names and values are new values.
 
         Returns:
@@ -314,7 +606,7 @@ class CSVStorage(GoalStorage):
         if not updated:
             return f"Goal '{goal_name}' not found."
 
-        storage._save_goals(data)  # ✅ Save the updated data
+        storage._save_goals(data)  # Save the updated data
         return f"Goal '{goal_name}' updated: " + ", ".join(f"{k} → {v}" for k, v in updates.items())
     
 def should_refresh_goals(_messages: list) -> bool:
@@ -324,81 +616,9 @@ def should_refresh_goals(_messages: list) -> bool:
     # TODO: Implement a more robust check based on tool calls
     return True
 
-# Define tools
-tools = [{
-    "type": "function",
-    "function": {
-        "name": "log_goal",
-        "description": "Log a new goal to the system.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "goal": {"type": "string"}
-            },
-            "required": ["goal"]
-        }
-    }
-}, {
-    "type": "function",
-    "function": {
-        "name": "view_goals",
-        "description": "View all logged goals.",
-        "parameters": {
-            "type": "object",
-            "properties": {},
-            "required": []
-        }
-    }
-}, {
-    "type": "function",
-    "function": {
-        "name": "mark_goal_complete",
-        "description": "Mark a goal as completed.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "goal": {"type": "string"}
-            },
-            "required": ["goal"]
-        }
-    }
-}, {
-    "type": "function",
-    "function": {
-        "name": "delete_goal",
-        "description": "Delete a goal from the tracker.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "goal": {"type": "string"}
-            },
-            "required": ["goal"]
-        }
-    }
-}, {
-    "type": "function",
-    "function": {
-        "name": "update_goal_fields",
-        "description": "Update multiple fields for a goal.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "goal": {
-                    "type": "string",
-                    "description": "The name of the goal to update."
-                },
-                "updates": {
-                    "type": "object",
-                    "description": "A dictionary of fields to update. Keys are field names, values are new values."
-                }
-            },
-            "required": ["goal", "updates"]
-        }
-    }
-}]
-
 def call_function(storage: GoalStorage, name: str, args: dict) -> str:
     """Executes the appropriate function based on the name."""
+    logging.info(f"Tool call: {name} with args: {args}")
     functions = {
         "log_goal": lambda args: storage.log_goal(args["goal"]),
         "view_goals": lambda _: storage.view_goals_formatted()[2],
@@ -406,6 +626,14 @@ def call_function(storage: GoalStorage, name: str, args: dict) -> str:
         "delete_goal": lambda args: storage.delete_goal(Goal(args["goal"])),
         "update_goal_fields": lambda args: storage.update_goal_fields(Goal(args["goal"]), args["updates"])
     }
+    
+    # functions = {
+    #     "log_goal": storage.log_goal,
+    #     "view_goals": storage.view_goals_formatted,
+    #     "mark_goal_complete": storage.mark_goal_complete,
+    #     "delete_goal": storage.delete_goal,
+    #     "update_goal_fields": storage.update_goal_fields
+    # }
 
     if name not in functions:
         raise ValueError(f"Unknown function: {name}")
@@ -421,13 +649,15 @@ def chat_with_openai(storage: GoalStorage, messages: list) -> tuple[str, list]:
     """
     try:
         # Call OpenAI API
-        completion = client.chat.completions.create(
-            model=MODEL_NAME,
+        first_response = completion(
+            # model=LITE_LLM_MODEL_NAME,
             messages=messages,
-            tools=tools
+            # tools=tools
         )
 
-        response_message = completion.choices[0].message
+        response_message = first_response.choices[0].message
+        
+        logging.info(f"First response message: {response_message}")
         
         # Handle tool calls if present
         if response_message.tool_calls:
@@ -460,14 +690,15 @@ def chat_with_openai(storage: GoalStorage, messages: list) -> tuple[str, list]:
                 messages.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
+                    "name": function_name,
                     "content": str(function_response)
                 })
 
             # Get final response from the model
-            final_completion = client.chat.completions.create(
-                model=MODEL_NAME,
+            final_completion = completion(
+                # model=LITE_LLM_MODEL_NAME,
                 messages=messages,
-                tools=tools
+                # tools=tools
             )
             
             return final_completion.choices[0].message.content, messages
@@ -500,7 +731,13 @@ SYSTEM_MESSAGE = {
         "are the same, even though they are worded slightly differently. "
         "If you're not sure what the user wants to achieve, or "
         "which goal they are referring to, ask for clarification. "
-        "Note that the user has a persistent view of the goals list as well."
+        "Note that the user has a persistent view of the goals list as well. "
+        "If the user asks you to make any modifications or updates to the list of goals, "
+        "you may use one or more of the following tools: "
+        "log_goal, view_goals, mark_goal_complete, delete_goal, update_goal_fields. "
+        "If you do not invoke any of these tools, the goal-tracking system will not be updated, "
+        "and the user will not see any changes to the goals list. "
+        "After each interaction, inform the user of the actions you have taken."
 }
 
 WELCOME_MESSAGE = {
@@ -553,8 +790,10 @@ def initialize_storage() -> GoalStorage:
         raise ValueError(f"Invalid STORAGE_BACKEND: {storage_type}. Choose 'google_sheets' or 'csv'.")
 
 def gradio_app(storage: GoalStorage) -> gr.Interface:
+    initial_goals = storage.view_goals_formatted()[2]
     # Initialize messages list
-    messages = [SYSTEM_MESSAGE, WELCOME_MESSAGE]
+    SYSTEM_MESSAGE["content"] += "\n\n Initial goals:\n\n" + initial_goals + "\n\n" + "This message will be displayed at the start of the chat: " + WELCOME_MESSAGE["content"]
+    messages = [SYSTEM_MESSAGE]
     
     with gr.Blocks() as app:
         with gr.Row():
@@ -590,8 +829,8 @@ def gradio_app(storage: GoalStorage) -> gr.Interface:
             return goals_data
 
         def interact(user_message, history):
-            if not user_message.strip():
-                return history, "", None
+            # if not user_message.strip():
+            #     return history, "", None
                 
             logging.info(f"User message: {user_message}")
             
@@ -630,6 +869,8 @@ def gradio_app(storage: GoalStorage) -> gr.Interface:
     return app
 
 if __name__ == "__main__":
+    # client = initialize_client()  # Use dynamically initialized client
+    initialize_lite_llm()
     storage = initialize_storage() # Dynamically selects storage backend
     app = gradio_app(storage)
     app.launch()
