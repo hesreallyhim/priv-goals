@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "priv-goals"
 version = "0.0.1"
-description = "A privacy-focused goal tracking application powered by A.I."
+description = "A privacy-focused goal-tracking application powered by A.I."
 readme = "README.md"
 authors = [{ name = "Really Him", email = "hesreallyhim@proton.me" }]
 license = { file = "LICENSE" }

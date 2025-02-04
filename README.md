@@ -1,7 +1,9 @@
 
 ## priv-goals
 
-A privacy-focused goal tracking application that runs locally on your machine. Track your goals, habits, and tasks with the help of AI, without sharing your data with third-party servers.
+A privacy-focused goal-tracking application that runs locally on your machine. Track your goals, habits, and tasks with the help of AI, without sharing your data with third-party servers (NOTE: depends on your chosen configuration).
+
+**[UNDER DEVELOPMENT]** This project is currently under development and not yet ready for active use. Bare functionality is implemented and available for exploration. Please check back later for updates.
 
 ## Features
 
@@ -216,7 +218,6 @@ MIT License - see LICENSE file for details
 - [ ] **Create a logging system** to record every conversation during development for debugging purposes.
 
 ### **6️⃣ Codebase & Documentation**
-- [ ] **Rename project** to `priv-goals`
 
 ### **7️⃣ Security & Privacy**
 - [ ] **Implement authentication** (optional) for local CSV storage.
