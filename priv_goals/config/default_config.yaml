@@ -1,0 +1,25 @@
+# Default configuration for priv-goals
+
+# LLM (Language Model) Settings
+provider: openai  # Options: openai, anthropic, ollama, custom
+api_key: ""  # Your API key (leave empty for Ollama)
+api_base: https://api.openai.com/v1  # API base URL
+model: gpt-4  # Model for your chosen provider
+
+# Storage Settings
+storage_type: csv  # Options: csv, google_sheets
+
+# CSV Storage Settings (when storage_type is 'csv')
+csv_file: ~/.priv-goals/goals.csv  # Default location for CSV storage
+
+# Google Sheets Settings (when storage_type is 'google_sheets')
+google_sheets_credentials: ""  # Path to service account JSON key file
+google_sheets_name: "PRIV GOALS"  # Name of the Google Sheet
+
+# Application Settings
+port: 7860  # Default web interface port
+debug: false  # Enable/disable debug mode
+
+# Logging Settings
+log_level: INFO  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+log_file: ~/.priv-goals/app.log  # Log file location

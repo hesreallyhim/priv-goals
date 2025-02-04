@@ -1,7 +1,7 @@
 
-# Squad Goals
+# Priv Goals
 
-**Squad Goals** is a simple goal-tracking app that allows users to:
+**Priv Goals** is a simple goal-tracking app that allows users to:
 - Log new goals with a status of "Pending."
 - View a list of all logged goals along with their statuses and timestamps.
 - Mark goals as "Completed."
@@ -19,7 +19,7 @@ The app uses **Gradio** for the user interface and **Google Sheets** as the back
 1. **Clone the repository**:
    ```bash
    git clone <repository-url>
-   cd squad-goals
+   cd priv-goals
    ```
 
 2. **Set up the virtual environment**:
@@ -51,7 +51,7 @@ The app uses **Gradio** for the user interface and **Google Sheets** as the back
 ## Project Structure
 
 ```
-squad-goals/
+priv-goals/
 ├── config/                   # Configuration files (e.g., service account JSON)
 ├── app.py                    # Main application logic
 ├── requirements.txt          # Python dependencies
@@ -101,9 +101,12 @@ squad-goals/
 ### **6️⃣ Codebase & Documentation**
 - [ ] **Rename project** to `priv-goals`
 
+### **7️⃣ Security & Privacy**
+- [ ] **Implement authentication** (optional) for local CSV storage.
+
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [GNU Affero General Public License](LICENSE).
 
 ---
 

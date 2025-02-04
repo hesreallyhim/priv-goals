@@ -1,5 +1,47 @@
 # Ignore the virtual environment
 venv/
-# Ignore the credentials file and environment file
+
+# Ignore the google service account file
 config/service_account.json
+
+# Ignore build artifacts
+dist/
+build/
+*.egg-info/
+__pycache__/
+
+# Ignore IDE settings
+.vscode/
+
+# Python version management
+.python-version
+
+# Python cache files
+*.py[cod]
+*$py.class
+
+# Local development
 .env
+.env.local
+.local/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Logs
+*.log
+
+# macOS system files
+.DS_Store
+
+# PyCharm
+.idea/
+
+# mypy
+.mypy_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
