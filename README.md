@@ -1,66 +1,183 @@
 
-# Priv Goals
+## priv-goals
 
-**Priv Goals** is a simple goal-tracking app that allows users to:
-- Log new goals with a status of "Pending."
-- View a list of all logged goals along with their statuses and timestamps.
-- Mark goals as "Completed."
-
-The app uses **Gradio** for the user interface and **Google Sheets** as the backend for data persistence.
+A privacy-focused goal tracking application that runs locally on your machine. Track your goals, habits, and tasks with the help of AI, without sharing your data with third-party servers.
 
 ## Features
 
-1. Log a new goal.
-2. View all logged goals in a table format.
-3. Mark a specific goal as "Completed."
+- 🔒 **Privacy First**: All data stored locally by default
+- 🤖 **AI-Powered**: Uses your preferred LLM for natural interaction
+- 📊 **Flexible Storage**: Choose between local CSV or Google Sheets
+- 🎯 **Goal Tracking**: Track status, progress, and completion
+- ⏰ **Duration Tracking**: Monitor expected vs actual completion time
+- 📝 **Notes & Updates**: Add context and track progress
+- 🔑 **Secure Credentials**: All sensitive keys stored in system keyring
 
 ## Installation
 
-1. **Clone the repository**:
+### Quick Install
+
+```bash
+pip install priv-goals
+priv-goals --setup
+```
+
+### Requirements
+
+- Python 3.8 or higher
+- An API key for your preferred LLM provider (OpenAI, Anthropic, etc.)
+- For Google Sheets storage: Google Cloud service account credentials
+- System keyring (usually pre-installed on most operating systems)
+
+### Detailed Installation Steps
+
+1. **Create a virtual environment (recommended)**:
    ```bash
-   git clone <repository-url>
-   cd priv-goals
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-2. **Set up the virtual environment**:
+2. **Install from PyPI**:
    ```bash
-   python3 -m venv venv
-   source venv/bin/activate
+   pip install priv-goals
    ```
 
-3. **Install dependencies**:
+3. **Run the setup wizard**:
    ```bash
-   pip install -r requirements.txt
+   priv-goals --setup
+   ```
+   
+   The setup wizard will guide you through:
+   - Choosing your LLM provider (OpenAI, Anthropic, Ollama, or custom)
+   - Securely storing your API key in the system keyring
+   - Selecting and configuring your model preferences
+   - Choosing your storage backend (local CSV or Google Sheets)
+   - Setting up any additional required credentials
+
+4. **Start the application**:
+   ```bash
+   priv-goals
    ```
 
-4. **Set up Google Sheets API**:
-   - Create a service account in Google Cloud and download the credentials file.
-   - Place the file in the `config/` directory and name it `service_account.json`.
-   - Share your Google Sheet with the service account email and grant **Editor** access.
+## Configuration
 
-5. **Run the app**:
-   ```bash
-   python app.py
-   ```
+Configuration is stored in `~/.priv-goals/config.yml`. Sensitive credentials like API keys and service account details are stored securely in your system's keyring.
+
+Example configuration:
+```yaml
+provider: openai
+api_key: $KEYRING_OPENAI_API_KEY
+api_base: https://api.openai.com/v1
+model: gpt-4
+storage_type: csv
+```
+
+## Storage Options
+
+### Local CSV (Default)
+- Data stored in `~/.priv-goals/goals.csv`
+- Complete privacy, no external services required
+- Suitable for personal use
+
+### Google Sheets
+- Requires Google Cloud service account credentials
+- Great for team collaboration
+- Accessible from multiple devices
+- To set up:
+  1. Create a Google Cloud project
+  2. Enable Google Sheets API
+  3. Create a service account and download credentials
+  4. Run `priv-goals --setup` and select Google Sheets storage
+  5. Your credentials will be securely stored in the system keyring
 
 ## Usage
 
-- Open the Gradio interface in your browser.
-- Talk to the chatbot to log new goals, view existing goals, and mark goals as completed.
+1. **Start the application**:
+   ```bash
+   priv-goals
+   ```
 
-## Project Structure
+2. **Access the web interface**:
+   Open your browser and navigate to `http://localhost:7860`
 
+3. **Interact naturally**:
+   - "Add a new goal to read a book by next month"
+   - "Show me my current goals"
+   - "Mark the reading goal as complete"
+   - "Add a note to my exercise goal"
+
+## Command Line Reference
+
+### Help Message
 ```
-priv-goals/
-├── config/                   # Configuration files (e.g., service account JSON)
-├── app.py                    # Main application logic
-├── requirements.txt          # Python dependencies
-├── .env                      # Local environment variables (optional)
-├── .env.example              # Example environment file
-├── .gitignore                # Git ignore rules
-└── README.md                 # Project documentation
+usage: priv-goals [-h] [--setup] [--port PORT] [--config CONFIG] [--debug]
+                  [--log-dir LOG_DIR] [--version]
+
+Privacy-focused goal tracking application with AI assistance.
+
+options:
+  -h, --help           show this help message and exit
+  --setup              Run the interactive setup wizard
+  --port PORT          Port to run the web interface on (default: 7860)
+  --config CONFIG      Path to configuration file (default: ~/.priv-goals/config.yml)
+  --debug              Enable debug mode with additional logging
+  --log-dir LOG_DIR    Directory for log files (default: ~/.priv-goals/logs)
+  --version           Show program's version number and exit
+
+Examples:
+  priv-goals                 # Start the application
+  priv-goals --setup         # Run the setup wizard
+  priv-goals --port 8080     # Start on specific port
+  priv-goals --config ~/my-config.yml  # Use custom config file
 ```
 
+### Common Commands
+
+1. **View help**:
+   ```bash
+   priv-goals --help
+   ```
+
+2. **Run setup wizard**:
+   ```bash
+   priv-goals --setup
+   ```
+
+3. **Start on custom port**:
+   ```bash
+   priv-goals --port 8080
+   ```
+
+4. **Enable debug logging**:
+   ```bash
+   priv-goals --debug
+   ```
+
+5. **Use custom config file**:
+   ```bash
+   priv-goals --config ~/custom-config.yml
+   ```
+
+6. **Check version**:
+   ```bash
+   priv-goals --version
+   ```
+
+## Security Notes
+
+- All sensitive credentials (API keys, service account details) are stored in your system's secure keyring
+- No credentials are stored in plain text
+- Temporary credential files are automatically cleaned up
+- Local CSV files are stored in your home directory
+- Google Sheets credentials are only used when needed and stored securely
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+MIT License - see LICENSE file for details
 ## Roadmap
 
 ### **1️⃣ Goal Management Enhancements**
@@ -103,6 +220,9 @@ priv-goals/
 
 ### **7️⃣ Security & Privacy**
 - [ ] **Implement authentication** (optional) for local CSV storage.
+
+### **8️⃣ CLI**
+- [ ] **Add command to print configuration** to the CLI.
 
 ## License
 
