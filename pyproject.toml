@@ -10,7 +10,7 @@ readme = "README.md"
 authors = [{ name = "Really Him", email = "hesreallyhim@proton.me" }]
 license = { file = "LICENSE" }
 classifiers = [
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]

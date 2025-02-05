@@ -177,9 +177,6 @@ Examples:
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License
-
-MIT License - see LICENSE file for details
 ## Roadmap
 
 ### **1️⃣ Goal Management Enhancements**
@@ -227,7 +224,7 @@ MIT License - see LICENSE file for details
 
 ## License
 
-This project is licensed under the [GNU Affero General Public License](LICENSE).
+This project is licensed under the [GNU Affero General Public License](LICENSE) (AGPLv3).
 
 ---
 
