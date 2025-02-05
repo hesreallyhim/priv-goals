@@ -5,16 +5,26 @@ build-backend = "hatchling.build"
 [project]
 name = "priv-goals"
 version = "0.0.1"
-description = "A privacy-focused goal-tracking application powered by A.I."
+description = "A privacy-focused goal tracking application"
 readme = "README.md"
-authors = [{ name = "Really Him", email = "hesreallyhim@proton.me" }]
+authors = [{ name = "Your Name", email = "your.email@example.com" }]
 license = { file = "LICENSE" }
 classifiers = [
     "License :: OSI Approved :: GNU Affero General Public License v3",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Office/Business :: Personal Task Managers",
+    "Topic :: Utilities",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
 ]
-keywords = ["goals", "productivity", "ai", "privacy"]
+keywords = ["goals", "productivity", "ai", "privacy", "personal-development", "task-management"]
 dependencies = [
     "gradio>=4.0.0",
     "litellm>=1.0.0",
@@ -25,6 +35,12 @@ dependencies = [
 ]
 requires-python = ">=3.8"
 
+[project.urls]
+Homepage = "https://github.com/yourusername/priv-goals"
+Repository = "https://github.com/yourusername/priv-goals.git"
+Documentation = "https://github.com/yourusername/priv-goals#readme"
+"Bug Tracker" = "https://github.com/yourusername/priv-goals/issues"
+
 [project.optional-dependencies]
 dev = ["black", "pylint", "pytest"]
 
@@ -33,3 +49,6 @@ priv-goals = "priv_goals.__main__:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["priv_goals"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
